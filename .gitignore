@@ -10,15 +10,20 @@
 !.yarn/releases
 !.yarn/versions
 
+.idea
+*.iml
+.vscode/
 # testing
 /coverage
 
 # next.js
 /.next/
+/\.next/cache/
 /out/
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
@@ -29,12 +34,16 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+pnpm-debug.log*
+.eslintcache
 
 # env files (can opt-in for committing if needed)
 .env*
 
 # vercel
 .vercel
+.turbo
+.swc
 
 # typescript
 *.tsbuildinfo
