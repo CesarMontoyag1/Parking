@@ -4,12 +4,33 @@ Landing page para un sistema de gestion de parqueaderos urbanos. La experiencia 
 
 ## Contenido
 
+- [Descripcion](#descripcion)
+- [Funcionalidades](#funcionalidades)
 - [Tecnologias](#tecnologias)
 - [Requisitos](#requisitos)
 - [Instalacion](#instalacion)
 - [Scripts](#scripts)
 - [Estructura](#estructura)
 - [Personalizacion](#personalizacion)
+
+## Descripcion
+
+NextPark es un sistema web tipo SaaS para la gestion integral de parqueaderos. La plataforma permite que una empresa centralice la operacion de uno o varios parqueaderos desde un unico ecosistema digital, sin instalaciones locales ni procesos manuales. Al estar en la nube, el sistema se puede usar desde celular, tableta o computador, con una interfaz rapida, moderna e intuitiva para personal operativo y administrativo.
+
+La solucion esta organizada por roles con permisos diferenciados. El vigilante registra entradas y salidas, genera tickets de cobro y consulta disponibilidad de celdas por nivel, sin acceso a datos financieros. El administrador gestiona tarifas, personal, reportes e indicadores del negocio, con analisis por periodos en planes avanzados.
+
+La plataforma incorpora inteligencia artificial generativa para interpretar patrones de ocupacion, detectar horas pico, anticipar comportamientos y sugerir mejoras en tarifas, distribucion de espacios y asignacion de recursos. Ademas, incluye facturacion digital, dashboards con graficas e indicadores, y un modo multi-sede para gestionar varias ubicaciones desde una sola cuenta.
+
+## Funcionalidades
+
+- SaaS multi-sede para administrar varios parqueaderos desde una sola cuenta.
+- Roles y permisos: vigilante operativo y administrador con control financiero.
+- Control de ingresos y salidas con tickets digitales y facturacion.
+- Disponibilidad en tiempo real por nivel o piso.
+- Panel de control con graficas de ingresos, ocupacion y tendencias.
+- Analitica por periodos (ultimo mes, 3 meses, 6 meses y ultimo ano en planes premium).
+- Notificaciones automaticas por umbrales de ocupacion.
+- Recomendaciones con IA generativa para optimizar tarifas y recursos.
 
 ## Tecnologias
 

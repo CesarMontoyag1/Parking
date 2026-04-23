@@ -47,21 +47,154 @@ export default function Home() {
         </section>
 
         {/* SECCIÓN QUIÉNES SOMOS - Contraste Blanco */}
-        <section id="nosotros" className="bg-white py-32 text-black">
-          <div className="container mx-auto grid grid-cols-1 gap-16 px-8 md:grid-cols-2">
+        <section id="nosotros" className="bg-white py-28 text-black">
+          <div className="container mx-auto grid grid-cols-1 items-center gap-16 px-8 md:grid-cols-2">
             <div>
               <h2 className="text-sm font-bold tracking-[0.4em] text-gray-500 uppercase">Innovación</h2>
               <h3 className="mt-4 text-4xl font-black md:text-6xl uppercase leading-none">
                 Ingeniería <br /> de precisión <br /> en cada plaza.
               </h3>
-            </div>
-            <div className="flex flex-col justify-end">
-              <p className="text-xl leading-relaxed text-gray-800">
-                En <strong>NextPark</strong>, no solo gestionamos espacios; diseñamos flujos urbanos inteligentes.
-                Utilizando algoritmos de alta disponibilidad y arquitecturas distribuidas, garantizamos que el
-                acceso a tu destino sea la parte más rápida de tu viaje.
+              <p className="mt-6 text-lg leading-relaxed text-gray-700">
+                En <strong>NextPark</strong>, diseñamos un ecosistema digital para que las empresas administren
+                parqueaderos de forma centralizada, segura y escalable. Nuestra propuesta combina operación en tiempo
+                real, analítica avanzada y automatización para elevar la experiencia de clientes y equipos internos.
               </p>
               <div className="mt-8 h-1 w-20 bg-black" />
+            </div>
+            <div className="relative overflow-hidden rounded-3xl border border-gray-200 bg-gray-50 p-10">
+              <img src="/globe.svg" alt="Ecosistema digital" className="h-28 w-28" />
+              <p className="mt-6 text-base uppercase tracking-[0.35em] text-gray-500">Ecosistema en la nube</p>
+              <p className="mt-4 text-lg text-gray-700">
+                Una sola plataforma para múltiples sedes, con acceso desde cualquier dispositivo.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* SECCIÓN DESCRIPCIÓN DEL PROYECTO */}
+        <section id="descripcion" className="bg-black py-24 text-white">
+          <div className="container mx-auto flex flex-col gap-12 px-8">
+            <header className="max-w-3xl">
+              <h2 className="text-sm font-bold tracking-[0.4em] text-gray-400 uppercase">Proyecto</h2>
+              <h3 className="mt-4 text-4xl font-black md:text-5xl uppercase leading-none">
+                Plataforma SaaS para la gestión integral de parqueaderos.
+              </h3>
+              <p className="mt-6 text-lg leading-relaxed text-gray-300">
+                NextPark permite centralizar operación, usuarios, ingresos y disponibilidad desde un único tablero,
+                eliminando procesos manuales y software local. La solución es 100% web y funciona en celular, tableta
+                o computador con una interfaz clara para personal operativo y administrativo.
+              </p>
+            </header>
+
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <h4 className="text-sm font-bold uppercase tracking-[0.3em] text-gray-400">Centralización</h4>
+                <p className="mt-4 text-lg text-gray-200">
+                  Gestiona uno o varios parqueaderos en un mismo ecosistema digital, con información actualizada y
+                  operaciones sincronizadas.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <h4 className="text-sm font-bold uppercase tracking-[0.3em] text-gray-400">Acceso inmediato</h4>
+                <p className="mt-4 text-lg text-gray-200">
+                  Experiencia rápida y moderna desde cualquier dispositivo con conexión a internet.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <h4 className="text-sm font-bold uppercase tracking-[0.3em] text-gray-400">Escalabilidad</h4>
+                <p className="mt-4 text-lg text-gray-200">
+                  Diseñado para crecer con la empresa, sin fricción operativa ni límites de expansión.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SECCIÓN ROLES */}
+        <section className="bg-white py-24 text-black">
+          <div className="container mx-auto grid grid-cols-1 gap-12 px-8 md:grid-cols-2">
+            <div className="rounded-3xl border border-gray-200 bg-gray-50 p-8">
+              <h3 className="text-2xl font-black uppercase">Vigilante</h3>
+              <p className="mt-4 text-lg text-gray-700">
+                Acceso a las funciones operativas esenciales para mantener el flujo del parqueadero.
+              </p>
+              <ul className="mt-6 space-y-3 text-gray-700">
+                <li>Registro de entradas y salidas.</li>
+                <li>Generación de ticket y cobro.</li>
+                <li>Consulta de disponibilidad por nivel o piso.</li>
+              </ul>
+            </div>
+            <div className="rounded-3xl border border-gray-900 bg-black p-8 text-white">
+              <h3 className="text-2xl font-black uppercase">Administrador</h3>
+              <p className="mt-4 text-lg text-gray-300">
+                Control total del negocio con analítica, configuración de tarifas y reportes financieros.
+              </p>
+              <ul className="mt-6 space-y-3 text-gray-300">
+                <li>Gestión de tarifas y tipos de vehículo.</li>
+                <li>Administración de personal de vigilancia.</li>
+                <li>Reportes financieros y análisis por periodos.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* SECCIÓN INTELIGENCIA Y DATOS */}
+        <section className="bg-black py-24 text-white">
+          <div className="container mx-auto grid grid-cols-1 items-center gap-16 px-8 md:grid-cols-2">
+            <div className="space-y-6">
+              <h2 className="text-3xl font-black uppercase md:text-4xl">IA generativa y analítica</h2>
+              <p className="text-lg leading-relaxed text-gray-300">
+                La plataforma interpreta patrones de ocupación, detecta horas pico y anticipa comportamientos
+                futuros. Con IA generativa, entrega recomendaciones automáticas sobre tarifas, optimización de
+                espacios y asignación de recursos, convirtiendo datos en decisiones accionables.
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                  <p className="text-sm font-bold uppercase tracking-[0.3em] text-gray-400">Dashboard</p>
+                  <p className="mt-3 text-gray-200">Gráficas de ingresos, ocupación y tendencias.</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                  <p className="text-sm font-bold uppercase tracking-[0.3em] text-gray-400">Predicción</p>
+                  <p className="mt-3 text-gray-200">Alertas y recomendaciones para momentos críticos.</p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-10">
+              <img src="/file.svg" alt="Analítica de datos" className="h-28 w-28" />
+              <p className="mt-6 text-base uppercase tracking-[0.35em] text-gray-400">Data-driven</p>
+              <p className="mt-4 text-lg text-gray-200">
+                Reportes del último mes, 3 meses, 6 meses y el último año en el plan premium.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* SECCIÓN OPERACIÓN AVANZADA */}
+        <section className="bg-white py-24 text-black">
+          <div className="container mx-auto flex flex-col gap-12 px-8">
+            <header className="max-w-3xl">
+              <h2 className="text-sm font-bold tracking-[0.4em] text-gray-500 uppercase">Operación avanzada</h2>
+              <h3 className="mt-4 text-4xl font-black uppercase leading-none">Automatización y control total</h3>
+            </header>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              <div className="rounded-3xl border border-gray-200 bg-gray-50 p-6">
+                <h4 className="text-lg font-bold">Facturación digital</h4>
+                <p className="mt-3 text-gray-700">
+                  Generación de comprobantes digitales para mayor formalidad y transparencia.
+                </p>
+              </div>
+              <div className="rounded-3xl border border-gray-200 bg-gray-50 p-6">
+                <h4 className="text-lg font-bold">Modo multi-sede</h4>
+                <p className="mt-3 text-gray-700">
+                  Gestión centralizada o independiente de múltiples ubicaciones.
+                </p>
+              </div>
+              <div className="rounded-3xl border border-gray-200 bg-gray-50 p-6">
+                <h4 className="text-lg font-bold">Notificaciones inteligentes</h4>
+                <p className="mt-3 text-gray-700">
+                  Alertas automáticas al alcanzar umbrales de ocupación.
+                </p>
+              </div>
             </div>
           </div>
         </section>
