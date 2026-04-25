@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Orbitron } from 'next/font/google';
 import LoginModal from './LoginModal';
 
@@ -11,23 +12,25 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/80 backdrop-blur-md">
+      <nav className={`${orbitron.className} sticky top-0 z-50 w-full border-b border-white/10 bg-black/80 backdrop-blur-md`}>
         {/* Layout fijo para reutilizar la navegación en todo el sitio */}
         <div className="container mx-auto flex items-center justify-between px-6 py-4">
-          <div className={`${orbitron.className} text-lg font-light tracking-widest text-gray-300`}>
+          <Link href="/#inicio" className="text-lg font-bold tracking-widest text-gray-300">
             NextPark
-          </div>
-
+          </Link>
           <div className="hidden space-x-8 md:flex">
-            <a href="#inicio" className="text-sm font-medium transition-colors hover:text-gray-400">
+            <Link href="/#inicio" className="text-sm font-medium transition-colors hover:text-gray-400">
               Inicio
-            </a>
-            <a href="#nosotros" className="text-sm font-medium transition-colors hover:text-gray-400">
+            </Link>
+            <Link href="/#nosotros" className="text-sm font-medium transition-colors hover:text-gray-400">
               Quiénes Somos
-            </a>
-            <a href="#descripcion" className="text-sm font-medium transition-colors hover:text-gray-400">
+            </Link>
+            <Link href="/#descripcion" className="text-sm font-medium transition-colors hover:text-gray-400">
               Descripción
-            </a>
+            </Link>
+            <Link href="/planes" className="text-sm font-medium transition-colors hover:text-gray-400">
+              Planes
+            </Link>
           </div>
 
           <div className="flex space-x-4">

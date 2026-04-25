@@ -25,7 +25,7 @@ export default function Home() {
               SISTEMA DE GESTION DE PARQUEADEROS <br />
             </h1>
             <p className="mt-8 max-w-xl text-lg font-light tracking-widest text-gray-300">
-              NextPark: TU ESPACIO URBANO, OPTIMIZADO PARA EL MAÑANA.
+              <strong className="font-bold">NextPark:</strong> TU ESPACIO URBANO, OPTIMIZADO PARA EL MAÑANA.
             </p>
 
             <div className="mt-12">
@@ -195,6 +195,35 @@ export default function Home() {
                   Alertas automáticas al alcanzar umbrales de ocupación.
                 </p>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SECCIÓN ÚNETENOS */}
+        <section id="unetenos" className="bg-black py-24 text-white">
+          <div className="container mx-auto grid grid-cols-1 items-center gap-12 px-8 md:grid-cols-2">
+            <div>
+              <h2 className="text-sm font-bold tracking-[0.4em] text-gray-400 uppercase">Únetenos</h2>
+              <h3 className="mt-4 text-4xl font-black uppercase leading-none md:text-5xl">
+                Elige el plan ideal para tu operación.
+              </h3>
+              <p className="mt-6 text-lg leading-relaxed text-gray-300">
+                Abre una nueva ventana con los planes disponibles y continúa con el proceso de pago de forma segura.
+              </p>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-10">
+              <p className="text-sm font-bold uppercase tracking-[0.3em] text-gray-400">Planes SaaS</p>
+              <p className="mt-4 text-lg text-gray-200">
+                Básico, Pro y Premium con analítica avanzada, multi-sede y recomendaciones de IA.
+              </p>
+              <a
+                href="/planes"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-8 inline-flex items-center justify-center border border-white px-8 py-3 text-sm font-bold tracking-widest transition-colors hover:bg-white hover:text-black"
+              >
+                VER PLANES
+              </a>
             </div>
           </div>
         </section>
