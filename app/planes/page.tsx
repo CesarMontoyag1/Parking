@@ -12,7 +12,7 @@ export default function PlanesPage() {
             Elige tu plan NextPark
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-gray-300">
-            Diseñado para operaciones de parqueaderos de todos los tamaños. Selecciona un plan y continúa con el pago.
+            Empieza con 3 días gratis y luego activa el plan ideal para tu operación.
           </p>
         </header>
 

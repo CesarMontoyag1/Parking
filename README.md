@@ -9,6 +9,7 @@ Landing page para un sistema de gestion de parqueaderos urbanos. La experiencia 
 - [Tecnologias](#tecnologias)
 - [Requisitos](#requisitos)
 - [Instalacion](#instalacion)
+- [Supabase](#supabase)
 - [Scripts](#scripts)
 - [Estructura](#estructura)
 - [Personalizacion](#personalizacion)
@@ -49,6 +50,12 @@ La plataforma incorpora inteligencia artificial generativa para interpretar patr
 ```bash
 npm install
 ```
+
+## Supabase
+
+1. Crea un archivo `.env.local` usando `.env.example` como plantilla.
+2. Agrega `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` desde tu proyecto en Supabase.
+3. El modal de login usa `supabase.auth.signInWithPassword` en `app/components/LoginModal.tsx`.
 
 ## Scripts
 
