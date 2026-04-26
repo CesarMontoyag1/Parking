@@ -42,6 +42,9 @@ export type StaffRow = {
   user_id: string;
   role: StaffRole;
   active: boolean;
+  email?: string | null;
+  full_name?: string | null;
+  created_at?: string;
 };
 
 export type RateRow = {
