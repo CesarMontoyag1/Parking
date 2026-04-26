@@ -1,18 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Orbitron } from 'next/font/google';
-import { supabase } from '../../../lib/supabase/client';
 
 const orbitron = Orbitron({ subsets: ['latin'], weight: ['400', '700', '900'] });
 
 export default function VigilantePanelPage() {
-  const [session, setSession] = useState<any>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-  }, []);
-
   return (
     <div className="space-y-12">
       <header>

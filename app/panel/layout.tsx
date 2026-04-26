@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Orbitron } from 'next/font/google';
+import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase/client';
 
 const orbitron = Orbitron({ subsets: ['latin'], weight: ['400', '700', '900'] });
@@ -11,7 +12,7 @@ const orbitron = Orbitron({ subsets: ['latin'], weight: ['400', '700', '900'] })
 export default function PanelLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -32,7 +33,10 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [router]);
 
   const handleLogout = async () => {
@@ -41,10 +45,11 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
   };
 
   const menuItems = [
-    { label: 'Inicio', href: '/panel/admin#inicio', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-    { label: 'Gestión de parqueaderos', href: '/panel/admin#gestion', icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
-    { label: 'Personal', href: '/panel/admin#vigilantes', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
-    { label: 'Tarifas', href: '/panel/admin#tarifas', icon: 'M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { label: 'Inicio', href: '/panel/admin/inicio', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+    { label: 'Gestion de parqueaderos', href: '/panel/admin/gestion', icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
+    { label: 'Personal', href: '/panel/admin/personal', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+    { label: 'Tarifas', href: '/panel/admin/tarifas', icon: 'M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { label: 'Contabilidad', href: '/panel/admin/contabilidad', icon: 'M3 3h18v18H3V3zm4 12h2V9H7v6zm4 0h2V6h-2v9zm4 0h2v-4h-2v4z' },
   ];
 
   return (
@@ -75,7 +80,9 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
               key={item.href} 
               href={item.href} 
               className={`flex items-center gap-4 rounded-xl px-4 py-4 transition-all ${
-                pathname === item.href ? 'bg-white text-black' : 'text-gray-500 hover:bg-white/5 hover:text-white'
+                pathname === item.href
+                  ? 'bg-white text-black'
+                  : 'text-gray-500 hover:bg-white/5 hover:text-white'
               }`}
             >
               <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
