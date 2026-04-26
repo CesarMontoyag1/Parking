@@ -9,14 +9,11 @@ import { supabase } from '../../lib/supabase/client';
 
 const orbitron = Orbitron({ subsets: ['latin'], weight: ['400', '700', '900'] });
 
-type RoleState = 'admin' | 'vigilante' | 'none';
-
 export default function Navbar() {
   const pathname = usePathname();
+  const shouldHideNavbar = pathname.startsWith('/panel');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [role, setRole] = useState<RoleState>('none');
-  const isAppArea = pathname.startsWith('/panel');
 
   useEffect(() => {
     let isMounted = true;
@@ -32,29 +29,10 @@ export default function Navbar() {
 
       if (!session) {
         setIsAuthenticated(false);
-        setRole('none');
         return;
       }
 
       setIsAuthenticated(true);
-
-      const { data } = await supabase
-        .from('tenant_users')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .eq('active', true);
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (data?.some((entry) => entry.role === 'admin')) {
-        setRole('admin');
-      } else if (data?.some((entry) => entry.role === 'vigilante')) {
-        setRole('vigilante');
-      } else {
-        setRole('none');
-      }
     };
 
     void loadSession();
@@ -68,25 +46,10 @@ export default function Navbar() {
 
       if (!session) {
         setIsAuthenticated(false);
-        setRole('none');
         return;
       }
 
       setIsAuthenticated(true);
-
-      const { data } = await supabase
-        .from('tenant_users')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .eq('active', true);
-
-      if (data?.some((entry) => entry.role === 'admin')) {
-        setRole('admin');
-      } else if (data?.some((entry) => entry.role === 'vigilante')) {
-        setRole('vigilante');
-      } else {
-        setRole('none');
-      }
     });
 
     return () => {
@@ -98,9 +61,13 @@ export default function Navbar() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsAuthenticated(false);
-    setRole('none');
     window.location.href = '/';
   };
+
+  // La experiencia de panel tiene navegación propia; ocultamos el navbar informativo.
+  if (shouldHideNavbar) {
+    return null;
+  }
 
   return (
     <>
@@ -111,80 +78,38 @@ export default function Navbar() {
             NextPark
           </Link>
 
-          {!isAppArea ? (
-            <>
-              <div className="hidden space-x-8 md:flex">
-                <Link href="/#inicio" className="text-sm font-medium transition-colors hover:text-gray-400">
-                  Inicio
-                </Link>
-                <Link href="/#nosotros" className="text-sm font-medium transition-colors hover:text-gray-400">
-                  Quiénes Somos
-                </Link>
-                <Link href="/#descripcion" className="text-sm font-medium transition-colors hover:text-gray-400">
-                  Descripción
-                </Link>
-                <Link href="/#unetenos" className="text-sm font-medium transition-colors hover:text-gray-400">
-                  Únetenos
-                </Link>
-              </div>
+          <div className="hidden space-x-8 md:flex">
+            <Link href="/#inicio" className="text-sm font-medium transition-colors hover:text-gray-400">
+              Inicio
+            </Link>
+            <Link href="/#nosotros" className="text-sm font-medium transition-colors hover:text-gray-400">
+              Quiénes Somos
+            </Link>
+            <Link href="/#descripcion" className="text-sm font-medium transition-colors hover:text-gray-400">
+              Descripción
+            </Link>
+            <Link href="/#unetenos" className="text-sm font-medium transition-colors hover:text-gray-400">
+              Únetenos
+            </Link>
+          </div>
 
-              <div className="flex space-x-4">
-                {!isAuthenticated ? (
-                  <button
-                    className="rounded-md border border-white px-5 py-2 text-sm font-medium transition-colors hover:bg-white hover:text-black"
-                    onClick={() => setIsLoginOpen(true)}
-                  >
-                    Ingresar
-                  </button>
-                ) : (
-                  <>
-                    <Link
-                      href="/panel"
-                      className="rounded-md border border-white px-5 py-2 text-sm font-medium transition-colors hover:bg-white hover:text-black"
-                    >
-                      Abrir app
-                    </Link>
-                    <button
-                      className="rounded-md border border-white/40 px-5 py-2 text-sm font-medium transition-colors hover:border-white"
-                      onClick={handleLogout}
-                    >
-                      Cerrar sesión
-                    </button>
-                  </>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="hidden space-x-8 md:flex">
-                <Link href="/panel" className="text-sm font-medium transition-colors hover:text-gray-400">
-                  Inicio App
-                </Link>
-                {role === 'admin' && (
-                  <Link href="/panel/admin" className="text-sm font-medium transition-colors hover:text-gray-400">
-                    Administración
-                  </Link>
-                )}
-                {role === 'vigilante' && (
-                  <Link href="/panel/vigilante" className="text-sm font-medium transition-colors hover:text-gray-400">
-                    Operación
-                  </Link>
-                )}
-                <Link href="/planes" className="text-sm font-medium transition-colors hover:text-gray-400">
-                  Planes
-                </Link>
-              </div>
-
-              <div className="flex space-x-4">
-                <button
-                  className="rounded-md border border-white px-5 py-2 text-sm font-medium transition-colors hover:bg-white hover:text-black"
-                  onClick={handleLogout}
-                >
-                  Cerrar sesión
-                </button>
-              </div>
-            </>
-          )}
+          <div className="flex space-x-4">
+            {!isAuthenticated ? (
+              <button
+                className="rounded-md border border-white px-5 py-2 text-sm font-medium transition-colors hover:bg-white hover:text-black"
+                onClick={() => setIsLoginOpen(true)}
+              >
+                Ingresar
+              </button>
+            ) : (
+              <button
+                className="rounded-md border border-white/40 px-5 py-2 text-sm font-medium transition-colors hover:border-white"
+                onClick={handleLogout}
+              >
+                Cerrar sesión
+              </button>
+            )}
+          </div>
         </div>
       </nav>
 

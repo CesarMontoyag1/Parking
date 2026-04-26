@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabase/client';
 
@@ -10,6 +10,22 @@ type TenantOption = {
     id: string;
     name: string;
   } | null;
+};
+
+type MembershipOption = {
+  account_id: string;
+  role: 'owner' | 'admin';
+  accounts: {
+    name: string;
+    plans?: { name?: string; code?: string } | { name?: string; code?: string }[] | null;
+  } | null;
+};
+
+type SidebarItem = {
+  id: 'resumen' | 'vigilantes' | 'tarifas' | 'contabilidad';
+  label: string;
+  description: string;
+  icon: ReactNode;
 };
 
 type TenantRow = {
@@ -28,15 +44,58 @@ export default function AdminPanelPage() {
   const [tenants, setTenants] = useState<TenantOption[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState('');
   const [guards, setGuards] = useState<GuardSummary[]>([]);
+  const [accountName, setAccountName] = useState('Mi empresa');
+  const [planName, setPlanName] = useState('Plan activo');
+  const [sessionEmail, setSessionEmail] = useState('');
+  const [sessionName, setSessionName] = useState('Administrador');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<SidebarItem['id']>('resumen');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  };
 
   const tenantName = useMemo(() => {
     const selected = tenants.find((entry) => entry.tenant_id === selectedTenantId);
     return selected?.tenants?.name || 'Sede';
   }, [selectedTenantId, tenants]);
+
+  const profileInitial = useMemo(() => {
+    const base = sessionName || sessionEmail || 'A';
+    return base.charAt(0).toUpperCase();
+  }, [sessionEmail, sessionName]);
+
+  const sidebarItems: SidebarItem[] = [
+    {
+      id: 'resumen',
+      label: 'Resumen',
+      description: 'Visión general del negocio',
+      icon: <span>▣</span>,
+    },
+    {
+      id: 'vigilantes',
+      label: 'Vigilantes',
+      description: 'Gestión de personal operativo',
+      icon: <span>◎</span>,
+    },
+    {
+      id: 'tarifas',
+      label: 'Tarifas',
+      description: 'Configuración de precios por vehículo',
+      icon: <span>¤</span>,
+    },
+    {
+      id: 'contabilidad',
+      label: 'Contabilidad',
+      description: 'Ventas, ingresos y reportes',
+      icon: <span>◍</span>,
+    },
+  ];
 
   useEffect(() => {
     let isMounted = true;
@@ -56,6 +115,40 @@ export default function AdminPanelPage() {
       if (!session) {
         window.location.href = '/';
         return;
+      }
+
+      setSessionEmail(session.user.email || '');
+      setSessionName(
+        (session.user.user_metadata?.full_name as string) ||
+          (session.user.user_metadata?.name as string) ||
+          session.user.email ||
+          'Administrador'
+      );
+
+      const { data: membershipData, error: membershipError } = await supabase
+        .from('memberships')
+        .select('account_id, role, accounts(name, plans(name, code))')
+        .eq('user_id', session.user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (!membershipError && membershipData) {
+        const membership = membershipData as unknown as MembershipOption;
+        if (membership.accounts?.name) {
+          setAccountName(membership.accounts.name);
+        }
+
+        const rawPlan = membership.accounts?.plans;
+        const normalizedPlan = Array.isArray(rawPlan) ? rawPlan[0] : rawPlan;
+        if (normalizedPlan?.name) {
+          setPlanName(normalizedPlan.name);
+        } else if (normalizedPlan?.code) {
+          setPlanName(normalizedPlan.code.toUpperCase());
+        }
       }
 
       const { data, error } = await supabase
@@ -194,55 +287,101 @@ export default function AdminPanelPage() {
 
   if (isLoading) {
     return (
-      <section className="min-h-screen bg-black px-6 py-20 text-white">
-        <div className="mx-auto max-w-6xl rounded-3xl border border-white/10 bg-white/5 p-10">
-          <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-400">Panel Admin</p>
-          <h1 className="mt-4 text-4xl font-black uppercase">Cargando información...</h1>
+      <section className="min-h-screen bg-gradient-to-b from-white via-gray-100 to-gray-200 px-6 py-20 text-black">
+        <div className="mx-auto max-w-6xl rounded-3xl border border-gray-200 bg-white p-10 shadow-xl">
+          <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-500">Panel Admin</p>
+          <h1 className="mt-4 text-4xl font-black uppercase">Cargando tu espacio...</h1>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="min-h-screen bg-black px-6 py-16 text-white">
-      <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[260px_1fr]">
-        <aside className="rounded-3xl border border-white/10 bg-white/5 p-6">
-          <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-400">Menu principal</p>
-          <h2 className="mt-4 text-2xl font-black uppercase">Administrador</h2>
-          <nav className="mt-8 flex flex-col gap-3 text-sm uppercase tracking-[0.2em] text-gray-300">
-            <span className="rounded-xl border border-white/20 px-4 py-3 text-white">Resumen</span>
-            <span className="rounded-xl border border-white/10 px-4 py-3">Vigilantes</span>
-            <Link href="/" className="rounded-xl border border-white/10 px-4 py-3 transition hover:border-white/40">
-              Volver al inicio
-            </Link>
+    <section className="min-h-screen bg-gradient-to-b from-white via-gray-100 to-gray-200 px-6 py-16 text-black">
+      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[320px_1fr]">
+        <aside className="rounded-3xl border border-black/10 bg-black p-6 text-white shadow-2xl">
+          <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-400">NextPark App</p>
+          <h2 className="mt-4 text-2xl font-black uppercase">Menú de administración</h2>
+
+          <div className="mt-8 rounded-2xl border border-white/15 bg-white/10 p-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-black text-lg font-black">
+                {profileInitial}
+              </div>
+              <div>
+                <p className="text-sm font-bold uppercase">{sessionName}</p>
+                <p className="text-xs text-gray-300">{sessionEmail || 'Cuenta activa'}</p>
+              </div>
+            </div>
+            <div className="mt-4 border-t border-white/10 pt-4 text-xs uppercase tracking-[0.2em] text-gray-300">
+              <p>Empresa: {accountName}</p>
+              <p className="mt-2">Plan: {planName}</p>
+              <p className="mt-2">Sede activa: {tenantName}</p>
+            </div>
+          </div>
+
+          <nav className="mt-8 flex flex-col gap-3 text-sm uppercase tracking-[0.2em]">
+            <button
+              type="button"
+              className="rounded-xl border border-white bg-white px-4 py-3 text-left font-bold text-black"
+            >
+              Resumen general
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border border-white/20 bg-transparent px-4 py-3 text-left text-white transition hover:border-white"
+            >
+              Gestión de vigilantes
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border border-white/20 bg-transparent px-4 py-3 text-left text-white transition hover:border-white"
+            >
+              Niveles y celdas
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border border-white/20 bg-transparent px-4 py-3 text-left text-white transition hover:border-white"
+            >
+              Tarifas y reportes
+            </button>
           </nav>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-8 w-full rounded-xl border border-white/30 px-4 py-3 text-xs font-bold uppercase tracking-[0.25em] text-white transition hover:border-white"
+          >
+            Cerrar sesión
+          </button>
         </aside>
 
         <main className="space-y-8">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
-            <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-400">Dashboard</p>
-            <h1 className="mt-4 text-4xl font-black uppercase">Panel de administración</h1>
-            <p className="mt-4 max-w-3xl text-gray-300">
-              Gestiona tus sedes, crea cuentas de vigilante y mantén el control operativo desde un solo lugar.
+          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-xl">
+            <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-500">Dashboard</p>
+            <h1 className="mt-4 text-4xl font-black uppercase text-black">Panel de administración</h1>
+            <p className="mt-4 max-w-3xl text-gray-700">
+              Administra tu operación con un diseño de trabajo real: usuarios, sedes, niveles y controles operativos
+              desde un solo sitio.
             </p>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-black/40 p-5">
-                <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Sedes</p>
-                <p className="mt-3 text-3xl font-black">{tenants.length}</p>
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Sedes</p>
+                <p className="mt-3 text-3xl font-black text-black">{tenants.length}</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-black/40 p-5">
-                <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Vigilantes activos</p>
-                <p className="mt-3 text-3xl font-black">{guards.length}</p>
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Vigilantes activos</p>
+                <p className="mt-3 text-3xl font-black text-black">{guards.length}</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-black/40 p-5">
-                <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Sede actual</p>
-                <p className="mt-3 text-base font-bold uppercase">{tenantName}</p>
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Sede actual</p>
+                <p className="mt-3 text-base font-bold uppercase text-black">{tenantName}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
+          <div className="rounded-3xl border border-gray-200 bg-black p-8 text-white shadow-xl">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-400">Personal operativo</p>
@@ -254,7 +393,7 @@ export default function AdminPanelPage() {
                 <select
                   value={selectedTenantId}
                   onChange={(event) => setSelectedTenantId(event.target.value)}
-                  className="mt-2 rounded-xl border border-white/20 bg-black/60 px-4 py-3 text-sm text-white"
+                  className="mt-2 rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white"
                 >
                   {tenants.map((tenant) => (
                     <option key={tenant.tenant_id} value={tenant.tenant_id}>
@@ -269,15 +408,15 @@ export default function AdminPanelPage() {
               <input
                 type="text"
                 name="fullName"
-                placeholder="Nombre completo"
-                className="rounded-xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white focus:border-white/60 focus:outline-none"
+                placeholder="Nombre completo del vigilante"
+                className="rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white focus:border-white/70 focus:outline-none"
                 required
               />
               <input
                 type="email"
                 name="email"
                 placeholder="Correo"
-                className="rounded-xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white focus:border-white/60 focus:outline-none"
+                className="rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white focus:border-white/70 focus:outline-none"
                 required
               />
               <input
@@ -285,13 +424,13 @@ export default function AdminPanelPage() {
                 name="password"
                 placeholder="Contrasena temporal"
                 minLength={8}
-                className="rounded-xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white focus:border-white/60 focus:outline-none"
+                className="rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white focus:border-white/70 focus:outline-none"
                 required
               />
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="rounded-xl border border-white bg-white px-5 py-3 text-sm font-bold uppercase tracking-[0.25em] text-black transition hover:bg-transparent hover:text-white disabled:opacity-60"
+                className="rounded-xl border border-white bg-white px-5 py-3 text-sm font-bold uppercase tracking-[0.25em] text-black transition hover:bg-black hover:text-white disabled:opacity-60"
               >
                 {isSubmitting ? 'Creando...' : 'Crear vigilante'}
               </button>
@@ -300,7 +439,7 @@ export default function AdminPanelPage() {
             {errorMessage && <p className="mt-4 text-sm text-red-400">{errorMessage}</p>}
             {successMessage && <p className="mt-4 text-sm text-green-400">{successMessage}</p>}
 
-            <div className="mt-8 rounded-2xl border border-white/10 bg-black/40 p-5">
+            <div className="mt-8 rounded-2xl border border-white/15 bg-white/5 p-5">
               <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Últimos vigilantes creados</p>
               <div className="mt-4 space-y-2 text-sm text-gray-200">
                 {guards.length === 0 ? (
