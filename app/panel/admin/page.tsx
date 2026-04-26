@@ -1,461 +1,94 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Orbitron } from 'next/font/google';
 import { supabase } from '../../../lib/supabase/client';
 
-type TenantOption = {
-  tenant_id: string;
-  tenants: {
-    id: string;
-    name: string;
-  } | null;
-};
-
-type MembershipOption = {
-  account_id: string;
-  role: 'owner' | 'admin';
-  accounts: {
-    name: string;
-    plans?: { name?: string; code?: string } | { name?: string; code?: string }[] | null;
-  } | null;
-};
-
-type SidebarItem = {
-  id: 'resumen' | 'vigilantes' | 'tarifas' | 'contabilidad';
-  label: string;
-  description: string;
-  icon: ReactNode;
-};
-
-type TenantRow = {
-  tenant_id: string;
-  tenants: { id: string; name: string } | { id: string; name: string }[] | null;
-};
-
-type GuardSummary = {
-  id: string;
-  user_id: string;
-  role: string;
-  created_at: string;
-};
+const orbitron = Orbitron({ subsets: ['latin'], weight: ['400', '700', '900'] });
 
 export default function AdminPanelPage() {
-  const [tenants, setTenants] = useState<TenantOption[]>([]);
-  const [selectedTenantId, setSelectedTenantId] = useState('');
-  const [guards, setGuards] = useState<GuardSummary[]>([]);
-  const [accountName, setAccountName] = useState('Mi empresa');
-  const [planName, setPlanName] = useState('Plan activo');
-  const [sessionEmail, setSessionEmail] = useState('');
-  const [sessionName, setSessionName] = useState('Administrador');
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [guards, setGuards] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<SidebarItem['id']>('resumen');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = '/';
-  };
-
-  const tenantName = useMemo(() => {
-    const selected = tenants.find((entry) => entry.tenant_id === selectedTenantId);
-    return selected?.tenants?.name || 'Sede';
-  }, [selectedTenantId, tenants]);
-
-  const profileInitial = useMemo(() => {
-    const base = sessionName || sessionEmail || 'A';
-    return base.charAt(0).toUpperCase();
-  }, [sessionEmail, sessionName]);
-
-  const sidebarItems: SidebarItem[] = [
-    {
-      id: 'resumen',
-      label: 'Resumen',
-      description: 'Visión general del negocio',
-      icon: <span>▣</span>,
-    },
-    {
-      id: 'vigilantes',
-      label: 'Vigilantes',
-      description: 'Gestión de personal operativo',
-      icon: <span>◎</span>,
-    },
-    {
-      id: 'tarifas',
-      label: 'Tarifas',
-      description: 'Configuración de precios por vehículo',
-      icon: <span>¤</span>,
-    },
-    {
-      id: 'contabilidad',
-      label: 'Contabilidad',
-      description: 'Ventas, ingresos y reportes',
-      icon: <span>◍</span>,
-    },
-  ];
 
   useEffect(() => {
-    let isMounted = true;
+    const fetchData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-    const loadAdminContext = async () => {
-      setIsLoading(true);
-      setErrorMessage(null);
+      // Sedes Reales
+      const { data: ten } = await supabase.from('tenant_users').select('tenant_id').eq('user_id', session.user.id);
+      setTenants(ten || []);
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!isMounted) {
-        return;
+      // Vigilantes Reales (Asumiendo que seleccionamos la primera sede para la métrica inicial)
+      if (ten && ten.length > 0) {
+        const { data: gua } = await supabase.from('tenant_users').select('id').eq('tenant_id', ten[0].tenant_id).eq('role', 'vigilante');
+        setGuards(gua || []);
       }
-
-      if (!session) {
-        window.location.href = '/';
-        return;
-      }
-
-      setSessionEmail(session.user.email || '');
-      setSessionName(
-        (session.user.user_metadata?.full_name as string) ||
-          (session.user.user_metadata?.name as string) ||
-          session.user.email ||
-          'Administrador'
-      );
-
-      const { data: membershipData, error: membershipError } = await supabase
-        .from('memberships')
-        .select('account_id, role, accounts(name, plans(name, code))')
-        .eq('user_id', session.user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (!membershipError && membershipData) {
-        const membership = membershipData as unknown as MembershipOption;
-        if (membership.accounts?.name) {
-          setAccountName(membership.accounts.name);
-        }
-
-        const rawPlan = membership.accounts?.plans;
-        const normalizedPlan = Array.isArray(rawPlan) ? rawPlan[0] : rawPlan;
-        if (normalizedPlan?.name) {
-          setPlanName(normalizedPlan.name);
-        } else if (normalizedPlan?.code) {
-          setPlanName(normalizedPlan.code.toUpperCase());
-        }
-      }
-
-      const { data, error } = await supabase
-        .from('tenant_users')
-        .select('tenant_id, tenants(id, name)')
-        .eq('user_id', session.user.id)
-        .eq('role', 'admin')
-        .eq('active', true)
-        .order('created_at', { ascending: true });
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (error) {
-        setErrorMessage(error.message);
-        setIsLoading(false);
-        return;
-      }
-
-      const tenantRows = ((data || []) as TenantRow[]).map((row) => ({
-        tenant_id: row.tenant_id,
-        tenants: Array.isArray(row.tenants) ? row.tenants[0] || null : row.tenants,
-      }));
-
-      setTenants(tenantRows);
-      setSelectedTenantId(tenantRows[0]?.tenant_id || '');
       setIsLoading(false);
     };
-
-    void loadAdminContext();
-
-    return () => {
-      isMounted = false;
-    };
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadGuards = async () => {
-      if (!selectedTenantId) {
-        setGuards([]);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('tenant_users')
-        .select('id, user_id, role, created_at')
-        .eq('tenant_id', selectedTenantId)
-        .eq('role', 'vigilante')
-        .eq('active', true)
-        .order('created_at', { ascending: false });
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (error) {
-        setErrorMessage(error.message);
-        return;
-      }
-
-      setGuards((data as GuardSummary[]) || []);
-    };
-
-    void loadGuards();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedTenantId]);
-
-  const handleCreateGuard = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
-    const formData = new FormData(event.currentTarget);
-    const email = String(formData.get('email') || '').trim();
-    const password = String(formData.get('password') || '');
-    const fullName = String(formData.get('fullName') || '').trim();
-
-    if (!selectedTenantId) {
-      setErrorMessage('Selecciona una sede antes de crear el vigilante.');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      setIsSubmitting(false);
-      setErrorMessage('Tu sesion ya no es valida. Inicia sesion de nuevo.');
-      return;
-    }
-
-    const response = await fetch('/api/admin/guards', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        tenantId: selectedTenantId,
-        email,
-        password,
-        fullName,
-      }),
-    });
-
-    const payload = (await response.json().catch(() => ({}))) as { error?: string };
-    setIsSubmitting(false);
-
-    if (!response.ok) {
-      setErrorMessage(payload.error || 'No se pudo crear la cuenta de vigilante.');
-      return;
-    }
-
-    setSuccessMessage('Cuenta de vigilante creada correctamente.');
-    event.currentTarget.reset();
-
-    const { data } = await supabase
-      .from('tenant_users')
-      .select('id, user_id, role, created_at')
-      .eq('tenant_id', selectedTenantId)
-      .eq('role', 'vigilante')
-      .eq('active', true)
-      .order('created_at', { ascending: false });
-
-    setGuards((data as GuardSummary[]) || []);
-  };
-
-  if (isLoading) {
-    return (
-      <section className="min-h-screen bg-gradient-to-b from-white via-gray-100 to-gray-200 px-6 py-20 text-black">
-        <div className="mx-auto max-w-6xl rounded-3xl border border-gray-200 bg-white p-10 shadow-xl">
-          <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-500">Panel Admin</p>
-          <h1 className="mt-4 text-4xl font-black uppercase">Cargando tu espacio...</h1>
-        </div>
-      </section>
-    );
-  }
+  if (isLoading) return <div className="p-10 text-[10px] font-black uppercase tracking-widest text-black">Sincronizando Base de Datos...</div>;
 
   return (
-    <section className="min-h-screen bg-gradient-to-b from-white via-gray-100 to-gray-200 px-6 py-16 text-black">
-      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[320px_1fr]">
-        <aside className="rounded-3xl border border-black/10 bg-black p-6 text-white shadow-2xl">
-          <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-400">NextPark App</p>
-          <h2 className="mt-4 text-2xl font-black uppercase">Menú de administración</h2>
+    <div className="space-y-12">
+      <header>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 mb-2">Administrador Principal</p>
+        <h1 className={`${orbitron.className} text-5xl font-black uppercase tracking-tighter text-black`}>
+          Visión <br /> General.
+        </h1>
+      </header>
 
-          <div className="mt-8 rounded-2xl border border-white/15 bg-white/10 p-5">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-black text-lg font-black">
-                {profileInitial}
-              </div>
-              <div>
-                <p className="text-sm font-bold uppercase">{sessionName}</p>
-                <p className="text-xs text-gray-300">{sessionEmail || 'Cuenta activa'}</p>
-              </div>
-            </div>
-            <div className="mt-4 border-t border-white/10 pt-4 text-xs uppercase tracking-[0.2em] text-gray-300">
-              <p>Empresa: {accountName}</p>
-              <p className="mt-2">Plan: {planName}</p>
-              <p className="mt-2">Sede activa: {tenantName}</p>
-            </div>
-          </div>
-
-          <nav className="mt-8 flex flex-col gap-3 text-sm uppercase tracking-[0.2em]">
-            <button
-              type="button"
-              className="rounded-xl border border-white bg-white px-4 py-3 text-left font-bold text-black"
-            >
-              Resumen general
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-white/20 bg-transparent px-4 py-3 text-left text-white transition hover:border-white"
-            >
-              Gestión de vigilantes
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-white/20 bg-transparent px-4 py-3 text-left text-white transition hover:border-white"
-            >
-              Niveles y celdas
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-white/20 bg-transparent px-4 py-3 text-left text-white transition hover:border-white"
-            >
-              Tarifas y reportes
-            </button>
-          </nav>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="mt-8 w-full rounded-xl border border-white/30 px-4 py-3 text-xs font-bold uppercase tracking-[0.25em] text-white transition hover:border-white"
-          >
-            Cerrar sesión
-          </button>
-        </aside>
-
-        <main className="space-y-8">
-          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-xl">
-            <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-500">Dashboard</p>
-            <h1 className="mt-4 text-4xl font-black uppercase text-black">Panel de administración</h1>
-            <p className="mt-4 max-w-3xl text-gray-700">
-              Administra tu operación con un diseño de trabajo real: usuarios, sedes, niveles y controles operativos
-              desde un solo sitio.
-            </p>
-
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
-                <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Sedes</p>
-                <p className="mt-3 text-3xl font-black text-black">{tenants.length}</p>
-              </div>
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
-                <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Vigilantes activos</p>
-                <p className="mt-3 text-3xl font-black text-black">{guards.length}</p>
-              </div>
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
-                <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Sede actual</p>
-                <p className="mt-3 text-base font-bold uppercase text-black">{tenantName}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-gray-200 bg-black p-8 text-white shadow-xl">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.35em] text-gray-400">Personal operativo</p>
-                <h2 className="mt-3 text-2xl font-black uppercase">Crear vigilante</h2>
-              </div>
-
-              <label className="flex flex-col text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">
-                Sede
-                <select
-                  value={selectedTenantId}
-                  onChange={(event) => setSelectedTenantId(event.target.value)}
-                  className="mt-2 rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white"
-                >
-                  {tenants.map((tenant) => (
-                    <option key={tenant.tenant_id} value={tenant.tenant_id}>
-                      {tenant.tenants?.name || tenant.tenant_id}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <form className="mt-8 grid gap-4 md:grid-cols-2" onSubmit={handleCreateGuard}>
-              <input
-                type="text"
-                name="fullName"
-                placeholder="Nombre completo del vigilante"
-                className="rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white focus:border-white/70 focus:outline-none"
-                required
-              />
-              <input
-                type="email"
-                name="email"
-                placeholder="Correo"
-                className="rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white focus:border-white/70 focus:outline-none"
-                required
-              />
-              <input
-                type="password"
-                name="password"
-                placeholder="Contrasena temporal"
-                minLength={8}
-                className="rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white focus:border-white/70 focus:outline-none"
-                required
-              />
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="rounded-xl border border-white bg-white px-5 py-3 text-sm font-bold uppercase tracking-[0.25em] text-black transition hover:bg-black hover:text-white disabled:opacity-60"
-              >
-                {isSubmitting ? 'Creando...' : 'Crear vigilante'}
-              </button>
-            </form>
-
-            {errorMessage && <p className="mt-4 text-sm text-red-400">{errorMessage}</p>}
-            {successMessage && <p className="mt-4 text-sm text-green-400">{successMessage}</p>}
-
-            <div className="mt-8 rounded-2xl border border-white/15 bg-white/5 p-5">
-              <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Últimos vigilantes creados</p>
-              <div className="mt-4 space-y-2 text-sm text-gray-200">
-                {guards.length === 0 ? (
-                  <p>No hay vigilantes registrados en esta sede.</p>
-                ) : (
-                  guards.slice(0, 5).map((guard) => (
-                    <p key={guard.id}>
-                      {guard.user_id} · {new Date(guard.created_at).toLocaleString('es-CO')}
-                    </p>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </main>
+      {/* MÉTRICAS REALES */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <MetricCard label="Sedes Vinculadas" value={tenants.length.toString()} detail="Sedes bajo tu administración" />
+        <MetricCard label="Vigilantes Registrados" value={guards.length.toString()} detail="Personal en la sede principal" isBlack />
       </div>
-    </section>
+
+      <div className="grid gap-10 lg:grid-cols-2">
+        {/* FORMULARIO - TEXTO NEGRO */}
+        <section id="vigilantes" className="rounded-[2.5rem] bg-white p-10 shadow-xl border border-gray-100">
+          <h2 className={`${orbitron.className} text-xl font-black uppercase text-black`}>Nuevo Operativo</h2>
+          <form className="mt-8 space-y-4">
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Nombre Completo</label>
+              <input type="text" className="w-full border-b-2 border-gray-200 py-3 text-sm font-black uppercase text-black outline-none focus:border-black transition-all" placeholder="EJ. JUAN PEREZ" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Email de Acceso</label>
+              <input type="email" className="w-full border-b-2 border-gray-200 py-3 text-sm font-black uppercase text-black outline-none focus:border-black transition-all" placeholder="VIGILANTE@NEXTPARK.COM" />
+            </div>
+            <button className="w-full bg-black py-5 mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-white hover:invert transition-all shadow-xl">
+              Crear Credenciales
+            </button>
+          </form>
+        </section>
+
+        <section id="gestion" className="rounded-[2.5rem] bg-white p-10 shadow-xl border border-gray-100">
+          <h2 className={`${orbitron.className} text-xl font-black uppercase text-black`}>Control de Sede</h2>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2 mb-8">Información de la sede activa</p>
+          <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100">
+            <p className="text-[9px] font-black text-gray-400 uppercase">Sede Actual</p>
+            <p className="text-xl font-black text-black mt-1 uppercase tracking-tight">Terminal Norte</p>
+            <div className="mt-4 flex gap-2">
+              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+              <span className="text-[9px] font-black text-black uppercase">Sistema Online</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ label, value, detail, isBlack = false }: { label: string, value: string, detail: string, isBlack?: boolean }) {
+  return (
+    <div className={`rounded-[2.5rem] p-10 transition-all ${isBlack ? 'bg-black text-white shadow-2xl' : 'bg-white text-black border border-gray-100 shadow-lg'}`}>
+      <p className={`text-[9px] font-black uppercase tracking-[0.3em] ${isBlack ? 'text-gray-500' : 'text-gray-400'}`}>{label}</p>
+      <p className={`${orbitron.className} mt-6 text-5xl font-black tracking-tighter uppercase`}>{value}</p>
+      <p className={`mt-4 text-[9px] font-bold uppercase tracking-widest ${isBlack ? 'text-gray-400' : 'text-gray-500'}`}>{detail}</p>
+    </div>
   );
 }
