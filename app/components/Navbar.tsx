@@ -99,7 +99,7 @@ export default function Navbar() {
                 className="rounded-md border border-white px-5 py-2 text-sm font-medium transition-colors hover:bg-white hover:text-black"
                 onClick={() => setIsLoginOpen(true)}
               >
-                Ingresar
+                Iniciar Sesión
               </button>
             ) : (
               <button
