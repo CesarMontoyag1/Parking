@@ -28,19 +28,38 @@ export async function POST(request: Request) {
 	return NextResponse.json({ error: 'Invalid session.' }, { status: 401 });
   }
 
-  // Si ya existe membership, el usuario ya fue inicializado en el sistema.
-  const { data: existingMembership, error: membershipError } = await adminClient
-	.from('memberships')
-	.select('id, account_id, role')
-	.eq('user_id', user.id)
-	.maybeSingle();
+  // Si el usuario ya pertenece a cualquier cuenta o sede, no debemos crear otra.
+  // Esto evita que un vigilante heredado desde un admin termine con una segunda
+  // cuenta/sede principal solo por volver a pasar por el flujo de bootstrap.
+  const [{ data: existingMembership, error: membershipError }, { data: existingTenantUser, error: tenantUserError }] =
+	await Promise.all([
+	  adminClient
+		.from('memberships')
+		.select('id, account_id, role')
+		.eq('user_id', user.id)
+		.limit(1)
+		.maybeSingle(),
+	  adminClient
+		.from('tenant_users')
+		.select('id, tenant_id, role, active')
+		.eq('user_id', user.id)
+		.limit(1)
+		.maybeSingle(),
+	]);
 
   if (membershipError) {
-	return NextResponse.json({ error: membershipError.message }, { status: 500 });
+  return NextResponse.json({ error: membershipError.message }, { status: 500 });
   }
 
-  if (existingMembership) {
-	return NextResponse.json({ initialized: true, role: existingMembership.role });
+  if (tenantUserError) {
+  return NextResponse.json({ error: tenantUserError.message }, { status: 500 });
+  }
+
+  if (existingMembership || existingTenantUser) {
+  return NextResponse.json({
+	initialized: true,
+	role: existingMembership?.role || existingTenantUser?.role || 'admin',
+  });
   }
 
   const { data: basicPlan, error: planError } = await adminClient
@@ -95,7 +114,7 @@ export async function POST(request: Request) {
   }
 
   // Si el trigger no esta instalado, garantizamos al menos el rol admin del owner.
-  const { error: tenantUserError } = await adminClient.from('tenant_users').upsert(
+  const { error: tenantUserUpsertError } = await adminClient.from('tenant_users').upsert(
 	{
 	  tenant_id: tenant.id,
 	  user_id: user.id,
@@ -105,8 +124,8 @@ export async function POST(request: Request) {
 	{ onConflict: 'tenant_id,user_id' }
   );
 
-  if (tenantUserError) {
-	return NextResponse.json({ error: tenantUserError.message }, { status: 500 });
+  if (tenantUserUpsertError) {
+	return NextResponse.json({ error: tenantUserUpsertError.message }, { status: 500 });
   }
 
   return NextResponse.json({ initialized: true, role: 'admin' });

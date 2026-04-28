@@ -539,9 +539,12 @@ export function useAdminDashboard(section: AdminSection) {
           headers: { authorization: `Bearer ${accessToken}` },
         });
         if (staffRes.ok) {
-          const json = await staffRes.json();
+          const json = (await staffRes.json().catch(() => ({}))) as {
+            staff?: StaffRow[];
+            isOwner?: boolean;
+          };
           if (Array.isArray(json.staff)) {
-            snapshot.staff = json.staff.map((s: any) => ({
+            snapshot.staff = json.staff.map((s) => ({
               id: s.id,
               user_id: s.user_id,
               role: s.role,
@@ -552,8 +555,9 @@ export function useAdminDashboard(section: AdminSection) {
             }));
             // also update tenant owner flag if provided
             if (typeof json.isOwner === 'boolean') {
-              const updatedTenants = tenants.map((t) => (t.id === tenantId ? { ...t, isOwner: json.isOwner } : t));
-              setTenants(updatedTenants);
+              setTenants((currentTenants) =>
+                currentTenants.map((t) => (t.id === tenantId ? { ...t, isOwner: json.isOwner } : t))
+              );
             }
           }
         }
