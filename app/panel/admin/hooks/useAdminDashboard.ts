@@ -192,6 +192,18 @@ export function useAdminDashboard(section: AdminSection) {
   const canAddAdmin = !selectedPlan || adminCount < selectedPlan.max_admins;
   const canAddGuard = !selectedPlan || guardCount < selectedPlan.max_vigilantes;
 
+  useEffect(() => {
+    if (isLoading || isTenantLoading || !selectedTenantId) {
+      return;
+    }
+
+    const canAccessAdminSection = isOwner || isAdmin;
+
+    if (!canAccessAdminSection && section !== 'contabilidad') {
+      router.replace('/panel/vigilante');
+    }
+  }, [isAdmin, isLoading, isOwner, isTenantLoading, router, section, selectedTenantId]);
+
   const buildSectionUrl = useCallback(
     (nextSection: AdminSection, tenantId?: string | null) => {
       const tenant = tenantId || selectedTenantId;

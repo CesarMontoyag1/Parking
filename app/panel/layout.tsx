@@ -2,29 +2,96 @@
 
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Orbitron } from 'next/font/google';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase/client';
 
 const orbitron = Orbitron({ subsets: ['latin'], weight: ['400', '700', '900'] });
 
+type PanelRole = 'loading' | 'admin' | 'vigilante' | 'none';
+
 export default function PanelLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [panelRole, setPanelRole] = useState<PanelRole>('loading');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const tenantId = searchParams.get('tenant');
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setUser(session.user);
-      } else {
-        router.push('/');
+    let isMounted = true;
+
+    const loadSessionAndRole = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!isMounted) {
+        return;
       }
-    });
+
+      if (!session) {
+        setUser(null);
+        setPanelRole('none');
+        router.push('/');
+        return;
+      }
+
+      setUser(session.user);
+
+      if (pathname.startsWith('/panel/vigilante')) {
+        setPanelRole('vigilante');
+        return;
+      }
+
+      if (tenantId) {
+        const { data: tenantUser } = await supabase
+          .from('tenant_users')
+          .select('role')
+          .eq('tenant_id', tenantId)
+          .eq('user_id', session.user.id)
+          .eq('active', true)
+          .maybeSingle();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setPanelRole(tenantUser?.role === 'admin' ? 'admin' : tenantUser?.role === 'vigilante' ? 'vigilante' : 'none');
+        return;
+      }
+
+      const { data: tenantRoles } = await supabase
+        .from('tenant_users')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('active', true);
+
+      if (!isMounted) {
+        return;
+      }
+
+      const hasAdmin = tenantRoles?.some((entry) => entry.role === 'admin');
+      const hasVigilante = tenantRoles?.some((entry) => entry.role === 'vigilante');
+
+      if (hasAdmin) {
+        setPanelRole('admin');
+        return;
+      }
+
+      if (hasVigilante) {
+        setPanelRole('vigilante');
+        return;
+      }
+
+      setPanelRole('none');
+    };
+
+    void loadSessionAndRole();
 
     // Cerrar dropdown al hacer click fuera
     const handleClickOutside = (event: MouseEvent) => {
@@ -35,22 +102,41 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
     document.addEventListener('mousedown', handleClickOutside);
 
     return () => {
+      isMounted = false;
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [router]);
+  }, [pathname, router, tenantId]);
+
+  useEffect(() => {
+    if (panelRole !== 'vigilante') {
+      return;
+    }
+
+    if (pathname.startsWith('/panel/admin') && !pathname.includes('/contabilidad')) {
+      router.replace('/panel/vigilante');
+    }
+  }, [panelRole, pathname, router]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/');
   };
 
-  const menuItems = [
+  const adminMenuItems = [
     { label: 'Inicio', href: '/panel/admin/inicio', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
     { label: 'Gestion de parqueaderos', href: '/panel/admin/gestion', icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
     { label: 'Personal', href: '/panel/admin/personal', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
     { label: 'Tarifas', href: '/panel/admin/tarifas', icon: 'M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z' },
     { label: 'Contabilidad', href: '/panel/admin/contabilidad', icon: 'M3 3h18v18H3V3zm4 12h2V9H7v6zm4 0h2V6h-2v9zm4 0h2v-4h-2v4z' },
   ];
+
+  const vigilanteMenuItems = [
+    { label: 'Terminal operativa', href: '/panel/vigilante', icon: 'M3 12h18M3 6h18M3 18h18' },
+    { label: 'Contabilidad', href: '/panel/admin/contabilidad', icon: 'M3 3h18v18H3V3zm4 12h2V9H7v6zm4 0h2V6h-2v9zm4 0h2v-4h-2v4z' },
+  ];
+
+  const menuItems = panelRole === 'vigilante' ? vigilanteMenuItems : adminMenuItems;
+  const profileRoleLabel = panelRole === 'vigilante' ? 'Vigilante' : panelRole === 'admin' ? 'Administrador' : 'Sin rol';
 
   return (
     <div className="flex min-h-screen bg-[#FBFBFB]">
@@ -114,7 +200,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
                   <p className="text-[10px] font-black uppercase tracking-widest text-white group-hover:text-gray-300 transition-colors">
                     {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
                   </p>
-                  <p className="text-[8px] font-bold text-gray-500 uppercase tracking-tighter">Administrador</p>
+                  <p className="text-[8px] font-bold text-gray-500 uppercase tracking-tighter">{profileRoleLabel}</p>
                 </div>
                 <div className="h-10 w-10 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-[11px] font-black text-white group-hover:bg-white group-hover:text-black transition-all">
                   {user?.email?.charAt(0).toUpperCase() || 'U'}

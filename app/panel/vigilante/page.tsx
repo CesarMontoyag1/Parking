@@ -12,6 +12,10 @@ export default function VigilantePanelPage() {
         <h1 className={`${orbitron.className} text-5xl font-black uppercase tracking-tighter text-black`}>
           Control de <br /> Campo.
         </h1>
+        <p className="mt-4 max-w-3xl text-sm font-semibold text-gray-600">
+          Vista restringida para vigilantes: registra entradas y salidas, consulta tu equipo de trabajo y revisa la contabilidad en modo lectura.
+          No hay accesos de edición administrativa.
+        </p>
       </header>
 
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -41,6 +45,41 @@ export default function VigilantePanelPage() {
           </div>
         </div>
       </div>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <article className="rounded-[2.5rem] border border-gray-100 bg-white p-8 shadow-xl">
+          <p className="text-[9px] font-black uppercase tracking-[0.35em] text-gray-500">Equipo de trabajo</p>
+          <h2 className={`${orbitron.className} mt-3 text-2xl font-black uppercase text-black`}>Consulta</h2>
+          <p className="mt-3 text-sm font-semibold text-gray-600">
+            Puedes observar a tu equipo y su estado operativo, pero no crear, editar ni eliminar usuarios.
+          </p>
+          <div className="mt-6 rounded-2xl border border-gray-100 bg-gray-50 p-4 text-xs font-semibold text-gray-600">
+            Sin acciones de edición disponibles para vigilantes.
+          </div>
+        </article>
+
+        <article className="rounded-[2.5rem] border border-gray-100 bg-white p-8 shadow-xl">
+          <p className="text-[9px] font-black uppercase tracking-[0.35em] text-gray-500">Contabilidad</p>
+          <h2 className={`${orbitron.className} mt-3 text-2xl font-black uppercase text-black`}>Solo lectura</h2>
+          <p className="mt-3 text-sm font-semibold text-gray-600">
+            El vigilante puede consultar ingresos y movimientos, pero no puede crear, editar ni borrar registros contables.
+          </p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Ingresos hoy</p>
+              <p className={`${orbitron.className} mt-2 text-2xl font-black text-black`}>$0</p>
+            </div>
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Movimientos</p>
+              <p className={`${orbitron.className} mt-2 text-2xl font-black text-black`}>0</p>
+            </div>
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Edición</p>
+              <p className={`${orbitron.className} mt-2 text-xl font-black text-black`}>Bloqueada</p>
+            </div>
+          </div>
+        </article>
+      </section>
 
       {/* REGISTROS RECIENTES - TEXTO NEGRO */}
       <section className="rounded-[2.5rem] bg-white p-10 shadow-xl border border-gray-100">
