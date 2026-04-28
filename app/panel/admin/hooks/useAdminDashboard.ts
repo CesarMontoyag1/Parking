@@ -20,13 +20,17 @@ import type {
   VehicleType,
 } from '../lib/types';
 
-type DashboardFormState = {
+export type DashboardAdminFormState = {
   levelName: string;
   levelNumber: string;
   cellCode: string;
   cellLevelId: string;
   staffUserId: string;
   staffRole: StaffRole;
+  staffFullName: string;
+  staffEmail: string;
+  staffPassword: string;
+  staffPhone: string;
   rateVehicleType: VehicleType;
   rateHourlyPrice: string;
   entryPlate: string;
@@ -144,13 +148,17 @@ export function useAdminDashboard(section: AdminSection) {
   const [activeTicketsCount, setActiveTicketsCount] = useState(cachedTenant?.activeTicketsCount || 0);
   const [closedTicketsCount, setClosedTicketsCount] = useState(cachedTenant?.closedTicketsCount || 0);
 
-  const [forms, setForms] = useState<DashboardFormState>({
+  const [forms, setForms] = useState<DashboardAdminFormState>({
     levelName: '',
     levelNumber: '1',
     cellCode: '',
     cellLevelId: '',
     staffUserId: '',
     staffRole: 'vigilante',
+    staffFullName: '',
+    staffEmail: '',
+    staffPassword: '',
+    staffPhone: '',
     rateVehicleType: 'carro',
     rateHourlyPrice: '',
     entryPlate: '',
@@ -164,6 +172,13 @@ export function useAdminDashboard(section: AdminSection) {
     () => tenants.find((tenant) => tenant.id === selectedTenantId) || null,
     [tenants, selectedTenantId]
   );
+
+  const isOwner = selectedTenant?.isOwner === true;
+
+  const isAdmin = useMemo(() => {
+    if (!userId) return false;
+    return staff.some((s) => s.user_id === userId && s.role === 'admin' && s.active);
+  }, [staff, userId]);
 
   const selectedPlan = selectedTenant?.plan || null;
   const adminCount = staff.filter((item) => item.role === 'admin' && item.active).length;
@@ -315,11 +330,32 @@ export function useAdminDashboard(section: AdminSection) {
     const accountsById = new Map(accountRows.map((account) => [account.id, account]));
     const plansById = new Map(planRows.map((plan) => [plan.id, plan]));
 
+    // determine which accounts the current user is owner of
+    const ownerAccountIds = new Set<string>();
+    if (accountRows.length > 0) {
+      try {
+        const { data: memData, error: memError } = await supabase
+          .from('memberships')
+          .select('account_id, role')
+          .in('account_id', accountRows.map((a) => a.id))
+          .eq('user_id', session.user.id);
+
+        if (!memError && memData) {
+          memData.forEach((m: { account_id: string; role: string }) => {
+            if (m.role === 'owner') ownerAccountIds.add(m.account_id);
+          });
+        }
+      } catch {
+        // ignore membership enrichment failures, default to no owner flags
+      }
+    }
+
     const tenantSummary: TenantInfo[] = (tenantRows || []).map((tenant) => {
       const account = accountsById.get(tenant.account_id);
       return {
         ...tenant,
         plan: account ? plansById.get(account.plan_id) || null : null,
+        isOwner: ownerAccountIds.has(tenant.account_id),
       };
     });
 
@@ -494,6 +530,38 @@ export function useAdminDashboard(section: AdminSection) {
       updatedAt: Date.now(),
     };
 
+    // Try to fetch enriched staff via server endpoint (includes email and full_name) using session token
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (accessToken) {
+        const staffRes = await fetch(`/api/admin/staff?tenantId=${tenantId}`, {
+          headers: { authorization: `Bearer ${accessToken}` },
+        });
+        if (staffRes.ok) {
+          const json = await staffRes.json();
+          if (Array.isArray(json.staff)) {
+            snapshot.staff = json.staff.map((s: any) => ({
+              id: s.id,
+              user_id: s.user_id,
+              role: s.role,
+              active: s.active,
+              email: s.email || null,
+              full_name: s.full_name || null,
+              created_at: s.created_at || undefined,
+            }));
+            // also update tenant owner flag if provided
+            if (typeof json.isOwner === 'boolean') {
+              const updatedTenants = tenants.map((t) => (t.id === tenantId ? { ...t, isOwner: json.isOwner } : t));
+              setTenants(updatedTenants);
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore enrichment failures
+    }
+
     storeTenantSnapshot(tenantId, snapshot);
     applyTenantSnapshot(snapshot);
     setIsTenantLoading(false);
@@ -530,7 +598,7 @@ export function useAdminDashboard(section: AdminSection) {
     return () => window.clearTimeout(id);
   }, [applyTenantSnapshot, loadTenantData, selectedTenantId]);
 
-  const setForm = <K extends keyof DashboardFormState>(key: K, value: DashboardFormState[K]) => {
+  const setForm = <K extends keyof DashboardAdminFormState>(key: K, value: DashboardAdminFormState[K]) => {
     setForms((current) => ({ ...current, [key]: value }));
   };
 
@@ -600,19 +668,58 @@ export function useAdminDashboard(section: AdminSection) {
       return;
     }
 
-    const { error } = await supabase.from('tenant_users').insert({
-      tenant_id: selectedTenantId,
-      user_id: forms.staffUserId.trim(),
-      role: forms.staffRole,
-      active: true,
-    });
+    // require email and password for creation flow
+    const email = forms.staffEmail.trim().toLowerCase();
+    const password = forms.staffPassword || '';
+    const fullName = forms.staffFullName.trim() || null;
 
-    if (error) {
-      setFeedbackMessage(error.message);
+    if (!email || !password) {
+      setFeedbackMessage('Email y contraseña son requeridos para crear un usuario.');
       return;
     }
 
-    setForm('staffUserId', '');
+    if (password.length < 8) {
+      setFeedbackMessage('La contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+
+    // check local role-based creation permission (owner/admin rules already enforced server-side)
+    if (forms.staffRole === 'admin' && !isOwner) {
+      setFeedbackMessage('Solo el owner puede crear administradores.');
+      return;
+    }
+
+    if (forms.staffRole === 'vigilante' && !(isOwner || isAdmin)) {
+      setFeedbackMessage('No tienes permisos para crear vigilantes.');
+      return;
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) {
+      setFeedbackMessage('No hay sesión válida para crear usuarios.');
+      return;
+    }
+
+    const res = await fetch('/api/admin/staff', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ tenantId: selectedTenantId, role: forms.staffRole, email, password, fullName }),
+    });
+
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setFeedbackMessage(body.error || 'No fue posible crear el usuario.');
+      return;
+    }
+
+    setForm('staffEmail', '');
+    setForm('staffPassword', '');
+    setForm('staffFullName', '');
+    setForm('staffPhone', '');
     setFeedbackMessage('Personal agregado correctamente.');
     await loadTenantData(selectedTenantId, true);
   };
@@ -769,6 +876,49 @@ export function useAdminDashboard(section: AdminSection) {
     await loadTenantData(selectedTenantId, true);
   };
 
+  const handleDeleteStaff = async (staffId: string) => {
+    if (!selectedTenantId || !userId) return;
+    setFeedbackMessage(null);
+
+    // fetch the staff row to inspect user_id and role
+    const { data: targetRow, error: fetchError } = await supabase
+      .from('tenant_users')
+      .select('id, user_id, role')
+      .eq('id', staffId)
+      .maybeSingle();
+
+    if (fetchError || !targetRow) {
+      setFeedbackMessage(fetchError?.message || 'No se encontro el registro de personal.');
+      return;
+    }
+
+    // prevent deleting your own access (owner/admin cannot remove their own tenant_user)
+    if (targetRow.user_id === userId) {
+      setFeedbackMessage('No puedes eliminar tu propio acceso desde este panel.');
+      return;
+    }
+
+    // only owner can delete admins
+    if (targetRow.role === 'admin' && !isOwner) {
+      setFeedbackMessage('Solo el owner puede eliminar administradores.');
+      return;
+    }
+
+    // vigilantes can be deleted by owner or by admins
+    if (targetRow.role === 'vigilante' && !(isOwner || isAdmin)) {
+      setFeedbackMessage('No tienes permisos para eliminar a este vigilante.');
+      return;
+    }
+
+    const { error } = await supabase.from('tenant_users').delete().eq('id', staffId);
+    if (error) {
+      setFeedbackMessage(error.message);
+      return;
+    }
+    setFeedbackMessage('Personal eliminado correctamente.');
+    await loadTenantData(selectedTenantId, true);
+  };
+
   return {
     isLoading,
     isTenantLoading,
@@ -777,6 +927,9 @@ export function useAdminDashboard(section: AdminSection) {
     tenants,
     selectedTenantId,
     selectedTenant,
+      isOwner,
+          userId,
+          isAdmin,
     selectedPlan,
     levels,
     cells,
@@ -803,6 +956,7 @@ export function useAdminDashboard(section: AdminSection) {
     buildSectionUrl,
     handleCreateLevel,
     handleCreateCell,
+    handleDeleteStaff,
     handleRegisterStaff,
     handleSaveRate,
     handleRegisterEntry,

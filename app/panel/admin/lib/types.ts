@@ -22,6 +22,7 @@ export type TenantInfo = {
   account_id: string;
   active: boolean;
   plan: PlanInfo | null;
+  isOwner?: boolean;
 };
 
 export type LevelRow = {

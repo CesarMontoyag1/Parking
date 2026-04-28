@@ -179,8 +179,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Tenant not found.' }, { status: 404 });
   }
 
-  if (!context.isOwner) {
-    return NextResponse.json({ error: 'Only the parking owner can create staff users.' }, { status: 403 });
+  // Allow owner to create any staff. Allow admins to create vigilantes only.
+  const canCreate = context.isOwner || (role === 'vigilante' && (await canViewStaff(adminClient, tenantId, user.id)));
+  if (!canCreate) {
+    return NextResponse.json({ error: 'Not allowed to create staff users for this tenant.' }, { status: 403 });
   }
 
   const { data: account, error: accountError } = await adminClient
