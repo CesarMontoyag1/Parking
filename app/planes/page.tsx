@@ -1,3 +1,4 @@
+//Pagina base de planes 
 import { Orbitron } from 'next/font/google';
 
 const orbitron = Orbitron({ subsets: ['latin'], weight: ['400', '700', '900'] });
